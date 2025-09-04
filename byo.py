@@ -1,10 +1,13 @@
 from keep_alive import keep_alive
-
 keep_alive()  # 啟動 Flask Ping 服務
 
 import discord
 import os
-from googletrans import Translator
+import asyncio
+import aiohttp
+import json
+from deep_translator import GoogleTranslator
+from langdetect import detect  # 新增語言偵測
 
 TOKEN = os.getenv("TOKEN")
 
@@ -28,7 +31,6 @@ webhook_channel_map = {
     "id": 1412376571158855751
 }
 
-translator = Translator()
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
@@ -72,7 +74,7 @@ async def on_message(message):
     detected_lang = "zh-cn"
     if original_text:
         try:
-            detected_lang = translator.detect(original_text).lang.lower()
+            detected_lang = detect(original_text)  # 用 langdetect 偵測
         except:
             detected_lang = "zh-cn"
 
@@ -88,19 +90,16 @@ async def on_message(message):
             translated_text = original_text
 
             try:
-                # 主頻道翻譯成繁體中文
                 if target_channel_id == webhook_channel_map["main"]:
-                    if detected_lang.startswith("zh"):  # 已經是中文就不翻譯
+                    if detected_lang.startswith("zh"):
                         translated_text = original_text
                     else:
-                        translated_text = translator.translate(original_text, dest="zh-tw").text
+                        translated_text = GoogleTranslator(source='auto', target='zh-tw').translate(original_text)
                 else:
-                    # 其他語言頻道翻譯成目標語言
-                    # 如果來源語言就是目標語言，就不翻譯
                     if detected_lang.startswith(lang):
                         translated_text = original_text
                     else:
-                        translated_text = translator.translate(original_text, dest=lang).text
+                        translated_text = GoogleTranslator(source='auto', target=lang).translate(original_text)
             except:
                 translated_text = original_text
 
@@ -115,10 +114,9 @@ async def on_message(message):
 
         if tasks:
             await asyncio.gather(*tasks)
-            translated_messages.add(message.id)  # 標記已翻譯
+            translated_messages.add(message.id)
             print(f"翻譯完成: {original_text} → 發送到 {len(tasks)} 個頻道")
 
 if __name__ == "__main__":
     print("🚀 正在啟動機器人...")
-    keep_alive()
     client.run(TOKEN)
