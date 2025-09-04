@@ -1,3 +1,4 @@
+# byo.py
 from keep_alive import keep_alive
 keep_alive()  # 啟動 Flask Ping 服務
 
@@ -7,28 +8,27 @@ import asyncio
 import aiohttp
 import json
 from deep_translator import GoogleTranslator
-from langdetect import detect  # 新增語言偵測
 
 TOKEN = os.getenv("TOKEN")
 
 # 各語言對應 Webhook
 language_webhooks = {
-    "main": "https://discord.com/api/webhooks/1412374568907051118/pJd9ZBD28snF4XEJmibzb3XP003huybu1FmkbV-rCeKes32Opi4koS7TPoGZGd98ghaP",
-    "en": "https://discord.com/api/webhooks/1412375789172953224/ZvwUT1Xh4CpCEKMC_NmV-IVAxSHf0wQiCqq2Qv_IuAosB2QChYd8XAaDDi1t19Y7a_vY",
-    "ko": "https://discord.com/api/webhooks/1409370266290884770/t-ZdUoiXHgTGqDG5moLR_SKeILr8dFHXF6aEQ_eUzKdtt04UkVvztAwfznSG75iIXY0t",
-    "id": "https://discord.com/api/webhooks/1412376593698914445/WZU35tWn8NnJ1V8gRZCDA_Nhll9MYWiZVcKR93rHTxsioaMohS9zekbemHP4ZS87eUOK",
-    "th": "https://discord.com/api/webhooks/1412375635279745024/1N5uQi0Atoml7zCESec9jYEHu1lr9V9HoBkTwAsqsJh5orynd2Je8dArTlJ6WvlZjjpv",
-    "pt": "https://discord.com/api/webhooks/1412379870985584650/HhwxrV7gSWbHinXHpjDV5RGIGuS69SUL3PDKBSIyshkdcjpjkUEkJbRzC27_tcu-EKHq"
+    "main": "https://discord.com/api/webhooks/XXXX/main",
+    "en": "https://discord.com/api/webhooks/XXXX/en",
+    "ko": "https://discord.com/api/webhooks/XXXX/ko",
+    "id": "https://discord.com/api/webhooks/XXXX/id",
+    "th": "https://discord.com/api/webhooks/XXXX/th",
+    "pt": "https://discord.com/api/webhooks/XXXX/pt"
 }
 
 # 對應每個 webhook 的頻道 ID
 webhook_channel_map = {
-    "main": 1365443913502167161,
-    "en": 1409363341230604440,
-    "ko": 1409364707193782302,
-    "pt": 1409491789102055444,
-    "th": 1409599149862686732,
-    "id": 1412376571158855751
+    "main": 123456789012345678,
+    "en": 123456789012345679,
+    "ko": 123456789012345680,
+    "pt": 123456789012345681,
+    "th": 123456789012345682,
+    "id": 123456789012345683
 }
 
 intents = discord.Intents.default()
@@ -70,13 +70,13 @@ async def on_message(message):
         file_bytes = await att.read()
         attachments.append((att.filename, file_bytes))
 
-    # 偵測語言
-    detected_lang = "zh-cn"
+    # 偵測語言（deep-translator 不支援直接 detect，改用 try/except）
+    detected_lang = "auto"
     if original_text:
         try:
-            detected_lang = detect(original_text)  # 用 langdetect 偵測
+            detected_lang = GoogleTranslator(source='auto', target='en').detect(original_text)
         except:
-            detected_lang = "zh-cn"
+            detected_lang = "auto"
 
     async with aiohttp.ClientSession() as session:
         tasks = []
@@ -91,11 +91,13 @@ async def on_message(message):
 
             try:
                 if target_channel_id == webhook_channel_map["main"]:
+                    # 主頻道翻譯成繁體中文
                     if detected_lang.startswith("zh"):
                         translated_text = original_text
                     else:
-                        translated_text = GoogleTranslator(source='auto', target='zh-tw').translate(original_text)
+                        translated_text = GoogleTranslator(source='auto', target='zh-TW').translate(original_text)
                 else:
+                    # 其他語言頻道
                     if detected_lang.startswith(lang):
                         translated_text = original_text
                     else:
